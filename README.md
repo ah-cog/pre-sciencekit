@@ -3,19 +3,21 @@ ScienceKit
 
 This is the initial, private ScienceKit repository.
 
-== Delpoy on Heroku ==
+## Delpoy on Heroku
 
-Clone from GitHub.
+Create local clone of ScienceKit GitHub repository:
 
-Create the Heroku app:
+	git clone https://github.com/mokogobo/pre-sciencekit.git
+
+Create a ScienceKit Heroku app:
 
 	heroku create
 
-Deploy to Heroku using the following command:
+Deploy ScienceKit to Heroku:
 
 	git push heroku master
 
-Open the deployed app:
+Open the deployed ScienceKit app on Heroku in a web browser:
 
 	heroku open
 
@@ -25,7 +27,7 @@ Make ScienceKit available at a subdomain:
 
 Use a custom domain by following the instructions at https://devcenter.heroku.com/articles/custom-domains.
 
-== Additional Heroku Instructions ==
+## Additional Heroku Instructions
 
 View Logs
 
