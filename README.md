@@ -1,6 +1,8 @@
 ScienceKit
 ==========
 
+ScienceKit is a real-time app.  Doing science.  Telling stories.
+
 This is the initial, private ScienceKit repository.
 
 ## Delpoy on Heroku
@@ -55,7 +57,7 @@ The file Procfile is a file that describes how to run the ScienceKit app on Hero
 
 1. Set up Node.js
 2. Check out repository on GitHub
-3. Install NPMs
+3. Install NPMs (npm install)
 4. Start server
 5. Open ScienceKit in web browser on local machine.
 6. Set up server for access over network from iPads.  Test on iPad or other iOS device.
