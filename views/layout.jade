@@ -1,0 +1,407 @@
+!!!5
+html
+  head
+    title #{title} - ScienceKit
+    link(rel='stylesheet', href='/stylesheets/style.css')
+    script(src="./js/easeljs-0.6.0.min.js")
+    script(src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.2/jquery.min.js")
+    script(src="./js/jquery.jrumble.1.3.min.js")
+
+    script
+      var canvas;
+      var stage;
+      var drawingCanvas;
+      var oldPt;
+      var oldMidPt;
+      var title;
+      var color;
+      var stroke;
+      var paletteColors;
+      var index;
+
+      // Brushes of various sizes
+      var brushSizeOptions = [];
+
+      // Canvas model
+      var strokes = [];
+
+      // Drawing tools (color palette and brush size)
+      var paletteX = 10;
+      var paletteY = 10;
+      var currentPaletteColor = "#000000";
+      var currentPalleteSize = 10;
+      var padding = 5;
+      var width = 65;
+      var height = 65;
+      var colorPaletteRectangleRadius = 5;
+      var cols = 15;
+
+      // Handler for mouseover event for color option in the palette
+      function handleMouseOver(event) {
+        var target = event.target;
+        target.graphics.clear().beginFill(target.outColor).drawRoundRect(-10, -10, width + 20, height + 20, colorPaletteRectangleRadius).endFill();
+
+        // Update color of brush options
+        for(i in brushSizeOptions) {
+          var brushSizeOption = brushSizeOptions[i];
+          brushSizeOption.graphics.clear().beginFill(target.outColor).drawCircle(0, 0, brushSizeOption.radius).endFill();
+        }
+      }
+
+      // Handler for click event on color palette
+      function handleMouseClick(event) {
+        var target = event.target;
+        currentPaletteColor = target.outColor; // Update palette color
+
+        // Update color of brush options
+        for(i in brushSizeOptions) {
+          var brushSizeOption = brushSizeOptions[i];
+          brushSizeOption.graphics.clear().beginFill(currentPaletteColor).drawCircle(0, 0, brushSizeOption.radius).endFill();
+        }
+      }
+
+      // Handler for mouseout event for color option in the palette
+      function handleMouseOut(event) {
+        var target = event.target;
+        target.graphics.clear().beginFill(target.outColor).drawRoundRect(0, 0, width, height, colorPaletteRectangleRadius).endFill();
+
+        // Update color of brush options
+        for(i in brushSizeOptions) {
+          var brushSizeOption = brushSizeOptions[i];
+          brushSizeOption.graphics.clear().beginFill(currentPaletteColor).drawCircle(0, 0, brushSizeOption.radius).endFill();
+        }
+      }
+
+      // Handler for mouseover event for color option in the palette
+      function handleMouseOverBrush(event) {
+       var target = event.target;
+       currentPalleteSize = target.radius * 2; // Update palette color
+       target.graphics.clear().beginFill(currentPaletteColor).drawCircle(0, 0, target.radius).endFill();
+      }
+
+      // Handler for mouseout event for color option in the palette
+      function handleMouseOutBrush(event) {
+        var target = event.target;
+        target.graphics.clear().beginFill(currentPaletteColor).drawCircle(0, 0, target.radius).endFill();
+      }
+
+      // Tool
+      function handleMouseClickTool(event) {
+        //alert("Tool! Photo? Camera? Audio?");
+        // load the source image:
+        var image = new Image();
+        image.src = "images/daisy.png";
+        image.onload = handleImageLoad;
+      }
+
+
+      // Initialize the canvas
+      function init() {
+        if (window.top != window) {
+          document.getElementById("header").style.display = "none";
+        }
+        canvas = document.getElementById("myCanvas");
+        index = 0;
+        paletteColors = ["#828b20", "#b0ac31", "#cbc53d", "#fad779", "#f9e4ad", "#faf2db", "#563512", "#9b4a0b", "#d36600", "#fe8a00", "#f9a71f"];
+
+        // "A stage is the root level Container for a display list. Each time its 
+        // Stage/tick method is called, it will render its display list to its target 
+        // canvas." [http://www.createjs.com/Docs/EaselJS/classes/Stage.html]
+        stage = new createjs.Stage(canvas);
+        stage.autoClear = true;
+        stage.enableDOMEvents(true);
+        stage.enableMouseOver(10); // Enable for mouseover event
+        createjs.Touch.enable(stage);
+
+        // TODO: Check to see if we are running in a browser with touch support
+        createjs.Ticker.setFPS(24);
+
+        drawingCanvas = new createjs.Shape();
+
+        stage.addEventListener("stagemousedown", handleMouseDown);
+        stage.addEventListener("stagemouseup", handleMouseUp);
+
+        title = new createjs.Text("touch here to draw", "36px Quicksand", "#777777");
+        title.x = 300;
+        title.y = 200;
+        stage.addChild(title);
+
+        stage.addChild(drawingCanvas);
+
+
+
+        // Draw color palette options
+        for(var i = 0; i < 11; i++) {
+          var s = new createjs.Shape(); // Create "button"
+          s.overColor = "#3281FF";
+          s.outColor = paletteColors[i];
+          //s.graphics.beginFill(s.outColor).drawRect(0, 0, width, height).endFill();
+          s.graphics.beginFill(s.outColor).drawRoundRect(0, 0, width, height, colorPaletteRectangleRadius).endFill();
+          s.x = paletteX + (width + padding) * (i % cols);
+          s.y = paletteY + (height + padding) * (i / cols | 0);
+
+          // Set up events to make the shape interactive
+          s.addEventListener("mouseover", handleMouseOver);
+          s.addEventListener("click", handleMouseClick);
+          s.addEventListener("mouseout", handleMouseOut);
+          stage.addChild(s);
+        }
+
+        // Create brush size options
+        for(var i = 0; i < 5; i++) {
+          var s = new createjs.Shape(); // Create "button"
+          s.overColor = "#3281FF";
+          s.outColor = paletteColors[i];
+          s.radius = 10 + 3 * i;
+          s.graphics.beginFill(s.outColor).drawCircle(0, 0, 10 + 3 * i).endFill();
+          s.x = 50 + (width + padding) * (i % cols);
+          s.y = 325;
+
+          // Set up events to make the shape interactive
+          s.onMouseOver = handleMouseOverBrush;
+          s.onMouseOut = handleMouseOutBrush;
+
+          brushSizeOptions.push(s);
+          stage.addChild(s);
+        }
+
+        // Create options to add draw, image, text, audio, tag
+        for(var i = 0; i < 5; i++) {
+          /*
+          var s = new createjs.Shape(); // Create "button"
+          s.overColor = "#3281FF";
+          s.outColor = "#0000ff";
+          s.graphics.beginFill(s.outColor).drawRect(0, 0, width, height).endFill();
+          s.x = (width + padding) * (i % cols);
+          s.y = 60;
+          */
+
+
+
+
+          // TODO: Add icons for different options
+          var image = "images/mic.png";
+          var imgW = image.width;
+          var imgH = image.height;
+          var bitmap;
+          var container = new createjs.Container();
+          //stage.addChild(container);
+          
+          // create a shape that represents the center of the daisy image:
+          //var hitArea = new createjs.Shape();
+          //hitArea.graphics.beginFill("#FFF").drawEllipse(-11,-14,24,18);
+          // position hitArea relative to the internal coordinate system of the target (bitmap instances):
+          //hitArea.x = imgW / 2;
+          //hitArea.y = imgH / 2;
+
+          // create and populate the screen with random daisies:
+          bitmap = new createjs.Bitmap(image);
+          container.addChild(bitmap);
+          //bitmap.x = canvas.width * Math.random()|0;
+          bitmap.x = (width + padding) * (i % cols);
+          //bitmap.y = canvas.height * Math.random()|0;
+          bitmap.y = 80;
+          //bitmap.rotation = 360 * Math.random()|0;
+          bitmap.regX = imgW / 2 | 0;
+          bitmap.regY = imgH / 2 | 0;
+          //bitmap.scaleX = bitmap.scaleY = bitmap.scale = Math.random() * 0.4 + 0.6;
+          bitmap.name = "bmp_tool_" + i;
+
+          bitmap.cursor = "pointer";
+
+          // Set up events to make the shape interactive
+          bitmap.addEventListener("click", handleMouseClickTool);
+          stage.addChild(container);
+        }
+
+        // Initialize color palette state
+        currentPaletteColor = paletteColors[0];
+
+        // Initialize brush size options state (based on initial state of color palette)
+        for(i in brushSizeOptions) {
+          var brushSizeOption = brushSizeOptions[i];
+          brushSizeOption.graphics.clear().beginFill(currentPaletteColor).drawCircle(0, 0, brushSizeOption.radius).endFill();
+        }
+
+
+        /*
+        $('#myCanvas').jrumble({
+          x: 2,
+          y: 2,
+          rotation: 1
+        });
+        $('#myCanvas').trigger('startRumble');
+        */
+
+        //createjs.Ticker.addListener(stage);
+        createjs.Ticker.addEventListener("tick", handleTick);
+
+        // "Each time the update method is called, the stage will tick any descendants exposing a tick method (ex. BitmapAnimation) and render its entire display list to the canvas. Any parameters passed to update will be passed on to any onTick handlers." [http://www.createjs.com/Docs/EaselJS/classes/Stage.html]
+        //stage.update();
+      }
+
+      function handleTick() {
+        stage.update();
+      }
+
+      // Painting. Handle mouse down event.
+      function handleMouseDown(event) {
+
+        // Make sure no object is under the brush.  Only paint when there's nothing under the brush.
+        var object = stage.getObjectUnderPoint(stage.mouseX, stage.mouseY);
+        if (object != null) {
+          return;
+        }
+        //alert(object);
+
+        if (stage.contains(title)) { 
+          stage.clear(); stage.removeChild(title);
+        }
+        //color = colors[(index++)%colors.length];
+        color = currentPaletteColor;
+        //stroke = Math.random()*30 + 10 | 0;
+        stroke = currentPalleteSize;
+        oldPt = new createjs.Point(stage.mouseX, stage.mouseY);
+        oldMidPt = oldPt;
+
+        // Add event listener for mouse movement.
+        // i.e., Start listening for mouse movements.
+        stage.addEventListener("stagemousemove" , handleMouseMove);
+      }
+
+      // Painting. Handle mouse move event.
+      function handleMouseMove(event) {
+
+        var midPt = new createjs.Point(oldPt.x + stage.mouseX >> 1, oldPt.y + stage.mouseY >> 1);
+
+        //drawingCanvas.graphics.clear().setStrokeStyle(stroke, 'round', 'round').beginStroke(color).moveTo(midPt.x, midPt.y).curveTo(oldPt.x, oldPt.y, oldMidPt.x, oldMidPt.y);
+
+        var s = new createjs.Shape();
+        s.graphics.clear().setStrokeStyle(stroke, 'round', 'round').beginStroke(color).moveTo(midPt.x, midPt.y).curveTo(oldPt.x, oldPt.y, oldMidPt.x, oldMidPt.y);
+        //s.graphics.beginFill("#333333").drawRect(stage.mouseX , stage.mouseY, width, height).endFill();
+        //s.cache(s.x, midPt.y, 100, 100, 100);
+        stage.addChild(s);
+
+        // Store stroke in array
+        // TODO: Store user that created the stroke
+        // TODO: Send stroke data to server and others on canvas via socket.io message
+        // TODO: Draw user avatar next to their current strokes (show them when the stroke is active or actively being rendered)
+        var strokePath = [];
+        // Store stroke path (from, midpoint, to)
+        strokePath['from'] = [];
+        strokePath['from'].x = midPt.x;
+        strokePath['from'].y = midPt.y;
+        strokePath['midpoint'] = [];
+        strokePath['midpoint'].x = oldPt.x;
+        strokePath['midpoint'].y = oldPt.y;
+        strokePath['to'] = [];
+        strokePath['to'].x = oldMidPt.x;
+        strokePath['to'].y = oldMidPt.y;
+        // Store color and size of stroke
+        strokePath['color'] = currentPaletteColor;
+        strokePath['size'] = currentPalleteSize;
+        // Store timestamp of stroke
+        strokePath['timestamp'] = new Date().getTime();
+        strokes.push(strokePath);
+
+        // Update points for future strokes
+        oldPt.x = stage.mouseX;
+        oldPt.y = stage.mouseY;
+
+        oldMidPt.x = midPt.x;
+        oldMidPt.y = midPt.y;
+
+        // Update the stage
+        stage.update();
+      }
+
+      // Painting.  Handle mouse up event.
+      function handleMouseUp(event) {
+        // Remove event listener for mousement.
+        // i.e., Stop listening for mouse movements.
+        stage.removeEventListener("stagemousemove" , handleMouseMove);
+      }
+
+
+
+
+
+      function handleImageLoad(event) {
+        var image = event.target;
+        var imgW = image.width;
+        var imgH = image.height;
+        var bitmap;
+        var container = new createjs.Container();
+        stage.addChild(container);
+        
+        // create a shape that represents the center of the daisy image:
+        var hitArea = new createjs.Shape();
+        hitArea.graphics.beginFill("#FFF").drawEllipse(-11,-14,24,18);
+        // position hitArea relative to the internal coordinate system of the target (bitmap instances):
+        hitArea.x = imgW / 2;
+        hitArea.y = imgH / 2;
+
+        // create and populate the screen with random daisies:
+        for(var i = 0; i < 1; i++) {
+          bitmap = new createjs.Bitmap(image);
+          container.addChild(bitmap);
+          bitmap.x = canvas.width * Math.random()|0;
+          bitmap.y = canvas.height * Math.random()|0;
+          bitmap.rotation = 360 * Math.random()|0;
+          bitmap.regX = imgW / 2 | 0;
+          bitmap.regY = imgH / 2 | 0;
+          bitmap.scaleX = bitmap.scaleY = bitmap.scale = Math.random() * 0.4 + 0.6;
+          bitmap.name = "bmp_" + i;
+
+          bitmap.cursor = "pointer";
+          
+          // assign the hitArea to each bitmap to use it for hit tests:
+          bitmap.hitArea = hitArea;
+
+          // wrapper function to provide scope for the event handlers:
+          (function(target) {
+            bitmap.onPress = function(evt) {
+              // bump the target in front of it's siblings:
+              container.addChild(target);
+              var offset = { x: target.x - evt.stageX, y: target.y - evt.stageY };
+
+              // add a handler to the event object's onMouseMove callback
+              // this will be active until the user releases the mouse button:
+              evt.onMouseMove = function(ev) {
+                target.x = ev.stageX + offset.x;
+                target.y = ev.stageY + offset.y;
+                // indicate that the stage should be updated on the next tick:
+                update = true;
+              }
+            }
+            bitmap.onMouseOver = function() {
+              target.scaleX = target.scaleY = target.scale * 1.2;
+              update = true;
+            }
+            bitmap.onMouseOut = function() {
+              target.scaleX = target.scaleY = target.scale;
+              update = true;
+            }
+          })(bitmap);
+        }
+
+        document.getElementById("loader").className = "";
+        //createjs.Ticker.addEventListener("tick", tick);
+      }
+
+
+
+  body(onload="init();")
+    div(id="loader")
+    header
+      h1 ScienceKit
+    center
+      canvas.skPage(id="myCanvas", width="960", height="1024")
+        | This browser does not support canvas.
+    .container
+      .main-content
+        block content
+      .sidebar
+        block sidebar
+    footer
+      p This ScienceKit prototype technology was built in the Human-Computer Interaction Lab at the University of Maryland, College Park.  Designed with the help of the Kidsteam.  Running on Node.js with Express, Jade and Stylus.
