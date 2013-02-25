@@ -29,4 +29,8 @@ app.get('/', function (req, res) {
 })
 
 // Start listening for incoming connections on specified port
-app.listen(3000)
+var port = process.env.PORT || 3000;
+app.listen(port)
+
+// Render some console log output
+console.log("Listening on port " + port);
